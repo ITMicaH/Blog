@@ -1,0 +1,221 @@
+<?xml version="1.0"?>
+<!-- RES ONE Workspace Building Block -->
+<!-- Created by Michaja van der Zouwen on 9-11-2017 16:50:15 -->
+<respowerfuse>
+	<version>10.1.100.0</version>
+	<buildingblock>
+		<powerlaunch>
+			<exttask>
+				<description>Save audio volume settings</description>
+				<command>powershell.exe -executionpolicy bypass -noprofile %script%</command>
+				<waitforapplication>yes</waitforapplication>
+				<runonce>disabled</runonce>
+				<script>Add-Type -TypeDefinition @'
+using System.Runtime.InteropServices;
+
+[Guid("5CDF2C82-841E-4546-9722-0CF74078229A"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+interface IAudioEndpointVolume {
+  // f(), g(), ... are unused COM method slots. Define these if you care
+  int f(); int g(); int h(); int i();
+  int SetMasterVolumeLevelScalar(float fLevel, System.Guid pguidEventContext);
+  int j();
+  int GetMasterVolumeLevelScalar(out float pfLevel);
+  int k(); int l(); int m(); int n();
+  int SetMute([MarshalAs(UnmanagedType.Bool)] bool bMute, System.Guid pguidEventContext);
+  int GetMute(out bool pbMute);
+}
+[Guid("D666063F-1587-4E43-81F1-B948E807363F"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+interface IMMDevice {
+  int Activate(ref System.Guid id, int clsCtx, int activationParams, out IAudioEndpointVolume aev);
+}
+[Guid("A95664D2-9614-4F35-A746-DE8DB63617E6"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+interface IMMDeviceEnumerator {
+  int f(); // Unused
+  int GetDefaultAudioEndpoint(int dataFlow, int role, out IMMDevice endpoint);
+}
+[ComImport, Guid("BCDE0395-E52F-467C-8E3D-C4579291692E")] class MMDeviceEnumeratorComObject { }
+
+public class Audio {
+  static IAudioEndpointVolume Vol() {
+    var enumerator = new MMDeviceEnumeratorComObject() as IMMDeviceEnumerator;
+    IMMDevice dev = null;
+    Marshal.ThrowExceptionForHR(enumerator.GetDefaultAudioEndpoint(/*eRender*/ 0, /*eMultimedia*/ 1, out dev));
+    IAudioEndpointVolume epv = null;
+    var epvid = typeof(IAudioEndpointVolume).GUID;
+    Marshal.ThrowExceptionForHR(dev.Activate(ref epvid, /*CLSCTX_ALL*/ 23, 0, out epv));
+    return epv;
+  }
+  public static float Volume {
+    get {float v = -1; Marshal.ThrowExceptionForHR(Vol().GetMasterVolumeLevelScalar(out v)); return v;}
+    set {Marshal.ThrowExceptionForHR(Vol().SetMasterVolumeLevelScalar(value, System.Guid.Empty));}
+  }
+  public static bool Mute {
+    get { bool mute; Marshal.ThrowExceptionForHR(Vol().GetMute(out mute)); return mute; }
+    set { Marshal.ThrowExceptionForHR(Vol().SetMute(value, System.Guid.Empty)); }
+  }
+}
+'@
+
+$RegKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Audio'
+If (!(Test-Path $RegKey))
+{
+    New-Item $RegKey
+}
+
+Set-ItemProperty -Path $RegKey -Name Volume -Value ([Audio]::Volume)
+Set-ItemProperty -Path $RegKey -Name Mute -Value ([Audio]::Mute)</script>
+				<scriptext>ps1</scriptext>
+				<timeoutperiod>30</timeoutperiod>
+				<hideapplication>yes</hideapplication>
+				<runusingdynamicprivileges>no</runusingdynamicprivileges>
+				<nofolderredir>no</nofolderredir>
+				<runatlogonbefore>no</runatlogonbefore>
+				<runatlogoff>yes</runatlogoff>
+				<runatlogoffbefore>yes</runatlogoffbefore>
+				<runatreconnect>no</runatreconnect>
+				<state>both</state>
+				<accesscontrol access_mode="or" zone_mode="or">
+					<access>
+						<type>global</type>
+					</access>
+				</accesscontrol>
+				<guid>{67FEE7B6-9CFE-44EF-AC68-CECC471B6EF5}</guid>
+				<enabled>yes</enabled>
+			</exttask>
+						<exttask>
+				<description>Apply saved volume settings</description>
+				<command>powershell.exe -executionpolicy bypass -noprofile %script%</command>
+				<waitforapplication>no</waitforapplication>
+				<runonce>disabled</runonce>
+				<script>Add-Type -TypeDefinition @'
+using System.Runtime.InteropServices;
+
+[Guid("5CDF2C82-841E-4546-9722-0CF74078229A"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+interface IAudioEndpointVolume {
+  // f(), g(), ... are unused COM method slots. Define these if you care
+  int f(); int g(); int h(); int i();
+  int SetMasterVolumeLevelScalar(float fLevel, System.Guid pguidEventContext);
+  int j();
+  int GetMasterVolumeLevelScalar(out float pfLevel);
+  int k(); int l(); int m(); int n();
+  int SetMute([MarshalAs(UnmanagedType.Bool)] bool bMute, System.Guid pguidEventContext);
+  int GetMute(out bool pbMute);
+}
+[Guid("D666063F-1587-4E43-81F1-B948E807363F"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+interface IMMDevice {
+  int Activate(ref System.Guid id, int clsCtx, int activationParams, out IAudioEndpointVolume aev);
+}
+[Guid("A95664D2-9614-4F35-A746-DE8DB63617E6"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+interface IMMDeviceEnumerator {
+  int f(); // Unused
+  int GetDefaultAudioEndpoint(int dataFlow, int role, out IMMDevice endpoint);
+}
+[ComImport, Guid("BCDE0395-E52F-467C-8E3D-C4579291692E")] class MMDeviceEnumeratorComObject { }
+
+public class Audio {
+  static IAudioEndpointVolume Vol() {
+    var enumerator = new MMDeviceEnumeratorComObject() as IMMDeviceEnumerator;
+    IMMDevice dev = null;
+    Marshal.ThrowExceptionForHR(enumerator.GetDefaultAudioEndpoint(/*eRender*/ 0, /*eMultimedia*/ 1, out dev));
+    IAudioEndpointVolume epv = null;
+    var epvid = typeof(IAudioEndpointVolume).GUID;
+    Marshal.ThrowExceptionForHR(dev.Activate(ref epvid, /*CLSCTX_ALL*/ 23, 0, out epv));
+    return epv;
+  }
+  public static float Volume {
+    get {float v = -1; Marshal.ThrowExceptionForHR(Vol().GetMasterVolumeLevelScalar(out v)); return v;}
+    set {Marshal.ThrowExceptionForHR(Vol().SetMasterVolumeLevelScalar(value, System.Guid.Empty));}
+  }
+  public static bool Mute {
+    get { bool mute; Marshal.ThrowExceptionForHR(Vol().GetMute(out mute)); return mute; }
+    set { Marshal.ThrowExceptionForHR(Vol().SetMute(value, System.Guid.Empty)); }
+  }
+}
+'@
+
+$RegKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Audio'
+If (Test-Path $RegKey)
+{
+    If ($Volume = Get-ItemProperty -Path $RegKey | Select -ExpandProperty Volume -ErrorAction SilentlyContinue)
+    {
+        [Audio]::Volume = $Volume
+    }
+    If ($Mute = Get-ItemProperty -Path $RegKey | Select -ExpandProperty Mute -ErrorAction SilentlyContinue)
+    {
+        [Audio]::Mute = [System.Convert]::ToBoolean($Mute)
+    }
+}</script>
+				<scriptext>ps1</scriptext>
+				<timeoutperiod>n.a.</timeoutperiod>
+				<hideapplication>yes</hideapplication>
+				<runusingdynamicprivileges>no</runusingdynamicprivileges>
+				<nofolderredir>no</nofolderredir>
+				<state>both</state>
+				<accesscontrol access_mode="or" zone_mode="or">
+					<access>
+						<type>global</type>
+					</access>
+				</accesscontrol>
+				<guid>{F2F568E5-916E-4AB3-AD22-340005AD9E85}</guid>
+				<enabled>yes</enabled>
+			</exttask>
+		</powerlaunch>
+		<userpreferences>
+			<profiles>
+				<profile>
+					<configview>basic</configview>
+					<name>Audio Volume</name>
+					<description></description>
+					<guid>{482222D8-2E23-422A-893D-CEB3F5AC3A0F}</guid>
+					<enabled>yes</enabled>
+					<mode>preserve_specific</mode>
+					<preserve>yes</preserve>
+					<userpref_store_policy>roam</userpref_store_policy>
+					<apply>yes</apply>
+					<userpref_load_policy>at_start</userpref_load_policy>
+					<overridelocalcaching>no</overridelocalcaching>
+					<rollback>no</rollback>
+					<rollback_sessions>5</rollback_sessions>
+					<rollback_console>no</rollback_console>
+					<rollback_default>no</rollback_default>
+					<rollback_console_default>no</rollback_console_default>
+					<samplingmode>no</samplingmode>
+					<samplingratio>
+						<numerator>1</numerator>
+						<denominator>10</denominator>
+					</samplingratio>
+					<capture_exclusively>no</capture_exclusively>
+					<accesscontrol access_mode="or" zone_mode="or">
+						<access>
+							<type>global</type>
+						</access>
+					</accesscontrol>
+					<settings>
+						<setting>
+							<type>regval</type>
+							<data>HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Audio</data>
+							<value>Volume</value>
+							<enabled>yes</enabled>
+							<cleanup>no</cleanup>
+							<exclusions/>
+						</setting>
+						<setting>
+							<type>regval</type>
+							<data>HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Audio</data>
+							<value>Mute</value>
+							<enabled>yes</enabled>
+							<cleanup>no</cleanup>
+							<exclusions/>
+						</setting>
+					</settings>
+					<old_usersettings>
+						<exclusions/>
+						<tracktree/>
+						<trackfolder/>
+						<exclude_filesize enabled="no" unit="mb"/>
+					</old_usersettings>
+				</profile>
+			</profiles>
+		</userpreferences>
+	</buildingblock>
+</respowerfuse>
