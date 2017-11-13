@@ -136,14 +136,13 @@
 			<powerlaunch>
 				<exttask>
 					<description>Force cache update</description>
-					<command>powershell.exe %script% -executionpolicy bypass</command>
+					<command>powershell.exe -executionpolicy bypass -noprofile -nologo %script%</command>
 					<waitforapplication>yes</waitforapplication>
 					<runonce>disabled</runonce>
-					<script>Write-Host 'Forcing a local cache update for Workspace Manager.'
-Write-Host ''
+					<script>Write-Host 'Forcing a local cache update for RES One Workspace...'
 
 # Set registry path for 32bit and 64bit clients
-If ($env:PROCESSOR_ARCHITECTURE -eq 'AMD64') {
+If (Test-Path 'HKLM:\SOFTWARE\Wow6432Node\RES\Workspace Manager\UpdateGUIDs') {
     $path = 'HKLM:\SOFTWARE\Wow6432Node\RES\Workspace Manager\UpdateGUIDs'
 }
 else {
@@ -151,16 +150,12 @@ else {
 }
 
 # Remove the Global guid registry value to trigger a cache update
-Remove-Itemproperty -path $path -name Global
+Remove-Itemproperty -path $path -name Global -Force
 
 # Wait until the Global key has been recreated
-$result = $null
 Do {
-    Write-Host '.' -NoNewline
-    $result = Get-Itemproperty -path $path -name Global -ErrorAction SilentlyContinue
-    Sleep -Milliseconds 50
-} Until ($result -ne $null)
-Write-Host ''
+    Sleep -Seconds 1
+} Until (Get-Itemproperty -path $path -name Global -ErrorAction SilentlyContinue)
 
 Write-Host 'Local cache update completed.'</script>
 					<scriptext>ps1</scriptext>
